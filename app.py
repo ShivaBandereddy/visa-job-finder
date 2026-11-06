@@ -4,7 +4,10 @@ import pandas as pd
 
 st.title("Visa Sponsorship Job Finder")
 
-keyword = st.text_input("Keyword", "recruiter")
+keyword = st.selectbox(
+    "Select role keyword",
+    ["HR", "Recruiter", "Talent Acquisition", "People", "Payroll", "Onboarding", "Manager"]
+)
 
 if st.button("Search jobs"):
     url = "https://www.arbeitnow.com/api/job-board-api"
