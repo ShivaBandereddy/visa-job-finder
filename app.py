@@ -69,3 +69,13 @@ if st.button("Search jobs"):
 
     if status != 200:
         st.error(f"Error {status}. Check your key in Secrets.")
+        st.stop()
+
+    st.write(f"Found {len(jobs)} jobs")
+
+    for job in jobs:
+        st.subheader(job.get("title", "No title"))
+        st.write(job.get("company", ""), "-", job.get("location", ""))
+        st.write(clean_text(job.get("snippet", ""))[:300])
+        st.link_button("Open job", job.get("link", ""))
+        st.divider()
