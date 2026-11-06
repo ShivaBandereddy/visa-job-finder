@@ -1,3 +1,4 @@
+import re
 import streamlit as st
 import requests
 import pandas as pd
@@ -14,6 +15,12 @@ countries = [
     "Sweden",
     "Norway",
 ]
+
+VISA_WORDS = ["visa sponsor", "sponsorship", "sponsor", "relocation", "relocate", "work permit", "blue card"]
+
+
+def clean_text(text):
+    return re.sub(r"<[^>]+>", "", text or "")
 
 
 @st.cache_data(ttl=3600)
@@ -35,6 +42,8 @@ keyword = st.selectbox(
 
 city = st.text_input("City (optional, e.g. Amsterdam, Edinburgh, Warsaw)", "")
 
+only_visa = st.checkbox("Show only jobs mentioning visa / relocation")
+
 if st.button("Search jobs"):
     location = city if city else country
     status, jobs = fetch_jobs(st.secrets["JOOBLE_API_KEY"], keyword, location)
@@ -44,16 +53,26 @@ if st.button("Search jobs"):
     else:
         rows = []
         for job in jobs:
+            title = job.get("title", "")
+            snippet = clean_text(job.get("snippet", ""))
+            text = (title + " " + snippet).lower()
+            visa_mention = any(word in text for word in VISA_WORDS)
+
+            if only_visa and not visa_mention:
+                continue
+
             rows.append({
-                "Title": job.get("title", ""),
+                "Visa mention": "✅" if visa_mention else "",
+                "Title": title,
                 "Company": job.get("company", ""),
                 "Location": job.get("location", ""),
                 "Salary": job.get("salary", ""),
                 "Link": job.get("link", ""),
+                "Snippet": snippet,
             })
 
         if rows:
             st.write(f"{len(rows)} jobs found")
             st.dataframe(pd.DataFrame(rows))
         else:
-            st.write("No jobs found. Try another keyword or city.")
+            st.write("No jobs found. Try another keyword, city, or untick the visa checkbox.")
