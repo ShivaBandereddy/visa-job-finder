@@ -22,6 +22,10 @@ VISA_WORDS = ["visa sponsor", "sponsorship", "sponsor", "relocation", "relocate"
 def clean_text(text):
     return re.sub(r"<[^>]+>", "", text or "")
 
+def mentions_visa(job):
+    text = (job.get("title", "") + " " + clean_text(job.get("snippet", ""))).lower()
+    return any(word in text for word in VISA_WORDS)
+
 
 def normalize(name):
     name = (name or "").lower()
@@ -70,11 +74,14 @@ if st.button("Search jobs"):
     if status != 200:
         st.error(f"Error {status}. Check your key in Secrets.")
         st.stop()
-
+    if only_visa:
+        jobs = [job for job in jobs if mentions_visa(job)]
     st.write(f"Found {len(jobs)} jobs")
 
     for job in jobs:
         st.subheader(job.get("title", "No title"))
+        if mentions_visa(job):
+            st.success("Visa / relocation mentioned ✅")
         st.write(job.get("company", ""), "-", job.get("location", ""))
         st.write(clean_text(job.get("snippet", ""))[:300])
         st.link_button("Open job", job.get("link", ""))
