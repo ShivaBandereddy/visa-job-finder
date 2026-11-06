@@ -23,6 +23,24 @@ def clean_text(text):
     return re.sub(r"<[^>]+>", "", text or "")
 
 
+def normalize(name):
+    name = (name or "").lower()
+    name = re.sub(r"[^a-z0-9 ]", " ", name)
+    words = [w for w in name.split() if w not in ("ltd", "limited", "plc", "llp", "inc", "llc")]
+    return " ".join(words)
+
+
+@st.cache_data
+def load_uk_sponsors():
+    try:
+        df = pd.read_csv("uk_sponsors.csv", encoding="utf-8-sig")
+    except UnicodeDecodeError:
+        df = pd.read_csv("uk_sponsors.csv", encoding="latin-1")
+    df["key"] = df["Organisation Name"].apply(normalize)
+    routes = df.groupby("key")["Route"].apply(lambda r: ", ".join(sorted(set(r.dropna()))))
+    return routes.to_dict()
+
+
 @st.cache_data(ttl=3600)
 def fetch_jobs(api_key, keyword, location):
     url = f"https://jooble.org/api/{api_key}"
@@ -43,6 +61,7 @@ keyword = st.selectbox(
 city = st.text_input("City (optional, e.g. Amsterdam, Edinburgh, Warsaw)", "")
 
 only_visa = st.checkbox("Show only jobs mentioning visa / relocation")
+only_sponsor = st.checkbox("Show only licensed sponsors (UK only)")
 
 if st.button("Search jobs"):
     location = city if city else country
@@ -50,29 +69,3 @@ if st.button("Search jobs"):
 
     if status != 200:
         st.error(f"Error {status}. Check your key in Secrets.")
-    else:
-        rows = []
-        for job in jobs:
-            title = job.get("title", "")
-            snippet = clean_text(job.get("snippet", ""))
-            text = (title + " " + snippet).lower()
-            visa_mention = any(word in text for word in VISA_WORDS)
-
-            if only_visa and not visa_mention:
-                continue
-
-            rows.append({
-                "Visa mention": "✅" if visa_mention else "",
-                "Title": title,
-                "Company": job.get("company", ""),
-                "Location": job.get("location", ""),
-                "Salary": job.get("salary", ""),
-                "Link": job.get("link", ""),
-                "Snippet": snippet,
-            })
-
-        if rows:
-            st.write(f"{len(rows)} jobs found")
-            st.dataframe(pd.DataFrame(rows))
-        else:
-            st.write("No jobs found. Try another keyword, city, or untick the visa checkbox.")
