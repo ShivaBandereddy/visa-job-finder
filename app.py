@@ -15,6 +15,17 @@ countries = [
     "Norway",
 ]
 
+
+@st.cache_data(ttl=3600)
+def fetch_jobs(api_key, keyword, location):
+    url = f"https://jooble.org/api/{api_key}"
+    payload = {"keywords": keyword, "location": location}
+    response = requests.post(url, json=payload, timeout=20)
+    if response.status_code != 200:
+        return response.status_code, []
+    return 200, response.json().get("jobs", [])
+
+
 country = st.selectbox("Select country", countries)
 
 keyword = st.selectbox(
@@ -25,18 +36,12 @@ keyword = st.selectbox(
 city = st.text_input("City (optional, e.g. Amsterdam, Edinburgh, Warsaw)", "")
 
 if st.button("Search jobs"):
-    api_key = st.secrets["JOOBLE_API_KEY"]
-    url = f"https://jooble.org/api/{api_key}"
-
     location = city if city else country
-    payload = {"keywords": keyword, "location": location}
+    status, jobs = fetch_jobs(st.secrets["JOOBLE_API_KEY"], keyword, location)
 
-    response = requests.post(url, json=payload, timeout=20)
-
-    if response.status_code != 200:
-        st.error(f"Error {response.status_code}. Check your key in Secrets.")
+    if status != 200:
+        st.error(f"Error {status}. Check your key in Secrets.")
     else:
-        jobs = response.json().get("jobs", [])
         rows = []
         for job in jobs:
             rows.append({
