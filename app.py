@@ -4,6 +4,7 @@ import requests
 import pandas as pd
 
 st.set_page_config(page_title="Visa Job Finder", page_icon="🌍", layout="wide")
+
 st.markdown(
     """
 <style>
@@ -18,10 +19,12 @@ st.markdown(
 """,
     unsafe_allow_html=True,
 )
+
 if "tracker" not in st.session_state:
     st.session_state["tracker"] = pd.DataFrame(
         columns=["Title", "Company", "Location", "Link", "Status"]
     )
+
 countries = [
     "United Kingdom",
     "Ireland",
@@ -35,21 +38,27 @@ countries = [
 
 VISA_WORDS = ["visa sponsor", "sponsorship", "sponsor", "relocation", "relocate", "work permit", "blue card"]
 
+GEMINI_MODEL = "gemini-3.5-flash-lite"
+
 
 def clean_text(text):
     return re.sub(r"<[^>]+>", "", text or "")
 
-def mentions_visa(job):
-    text = (job.get("title", "") + " " + clean_text(job.get("snippet", ""))).lower()
-    return any(word in text for word in VISA_WORDS)
-def sponsor_routes(job, sponsors):
-    return sponsors.get(normalize(job.get("company", "")))
 
 def normalize(name):
     name = (name or "").lower()
     name = re.sub(r"[^a-z0-9 ]", " ", name)
     words = [w for w in name.split() if w not in ("ltd", "limited", "plc", "llp", "inc", "llc")]
     return " ".join(words)
+
+
+def mentions_visa(job):
+    text = (job.get("title", "") + " " + clean_text(job.get("snippet", ""))).lower()
+    return any(word in text for word in VISA_WORDS)
+
+
+def sponsor_routes(job, sponsors):
+    return sponsors.get(normalize(job.get("company", "")))
 
 
 @st.cache_data
@@ -72,7 +81,7 @@ def fetch_jobs(api_key, keyword, location):
         return response.status_code, []
     return 200, response.json().get("jobs", [])
 
-GEMINI_MODEL = "gemini-3.5-flash-lite"
+
 def ask_gemini(prompt):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
     headers = {"x-goog-api-key": st.secrets["GEMINI_API_KEY"]}
@@ -81,6 +90,7 @@ def ask_gemini(prompt):
     if response.status_code != 200:
         return f"Gemini error {response.status_code}: {response.text[:200]}"
     return response.json()["candidates"][0]["content"]["parts"][0]["text"]
+
 
 def make_prompt(cv, job):
     return f"""You are an experienced HR recruiter. Compare this CV with this job.
@@ -98,23 +108,7 @@ Job title: {job.get("title", "")}
 Company: {job.get("company", "")}
 Job description: {clean_text(job.get("snippet", ""))}
 """
-    
-country = st.selectbox("Select country", countries)
 
-keyword = st.selectbox(
-    "Select role keyword",
-    ["HR", "Recruiter", "Talent Acquisition", "People Operations", "Payroll", "Onboarding", "HR Manager"]
-)
-
-city = st.text_input("City (optional, e.g. Amsterdam, Edinburgh, Warsaw)", "")
-
-only_visa = st.checkbox("Show only jobs mentioning visa / relocation")
-only_sponsor = st.checkbox("Show only licensed sponsors (UK only)")
-
-cv_text = st.text_area(
-    "Paste your CV text here (optional, used for match score later)",
-    height=200,
-)
 
 def make_letter_prompt(cv, job):
     return f"""You are an experienced HR professional writing a job application.
@@ -130,10 +124,35 @@ Company: {job.get("company", "")}
 Job description: {clean_text(job.get("snippet", ""))}
 """
 
+
+# ---------- Sidebar: search filters ----------
+st.sidebar.header("🔎 Search filters")
+
+country = st.sidebar.selectbox("Country", countries)
+
+keyword = st.sidebar.selectbox(
+    "Role keyword",
+    ["HR", "Recruiter", "Talent Acquisition", "People Operations", "Payroll", "Onboarding", "HR Manager"],
+)
+
+city = st.sidebar.text_input("City (optional)", "", placeholder="e.g. Amsterdam, Edinburgh")
+
+only_visa = st.sidebar.checkbox("Only visa / relocation jobs")
+only_sponsor = st.sidebar.checkbox("Only licensed sponsors (UK only)")
+
+search_clicked = st.sidebar.button("Search jobs", type="primary", use_container_width=True)
+
+# ---------- Main page: CV box ----------
+cv_text = st.text_area(
+    "Paste your CV text here (remove phone, address and email first)",
+    height=180,
+)
+
 if cv_text:
     st.caption(f"CV loaded: {len(cv_text.split())} words")
-    
-if st.button("Search jobs"):
+
+# ---------- Search ----------
+if search_clicked:
     location = city if city else country
     status, jobs = fetch_jobs(st.secrets["JOOBLE_API_KEY"], keyword, location)
 
@@ -156,6 +175,7 @@ if st.button("Search jobs"):
     st.session_state["scores"] = {}
     st.session_state["letters"] = {}
 
+# ---------- Results ----------
 if "jobs" in st.session_state:
     jobs = st.session_state["jobs"]
     sponsors = load_uk_sponsors() if st.session_state["searched_country"] == "United Kingdom" else {}
@@ -194,7 +214,12 @@ if "jobs" in st.session_state:
                     st.session_state["letters"][i] = ask_gemini(make_letter_prompt(cv_text, job))
 
         if i in st.session_state["letters"]:
-            st.text_area("Cover letter draft (edit and copy)", st.session_state["letters"][i], height=300, key=f"letter_box_{i}")
+            st.text_area(
+                "Cover letter draft (edit and copy)",
+                st.session_state["letters"][i],
+                height=300,
+                key=f"letter_box_{i}",
+            )
 
         if st.button("Save job", key=f"save_{i}"):
             link = job.get("link", "")
@@ -213,6 +238,8 @@ if "jobs" in st.session_state:
                 st.success("Saved to tracker ✅")
 
         st.divider()
+
+# ---------- Tracker ----------
 st.header("My Application Tracker")
 
 uploaded = st.file_uploader("Load a saved tracker CSV (optional)", type="csv")
