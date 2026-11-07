@@ -75,9 +75,9 @@ Never commit API keys to GitHub.
 - Case study of my recruitment portal (Project 3)
 
 ## Screenshots
-
+screen.png in the folder
 
 
 ## About me
 
-HR manager from India moving into HR-tech and recruitment operations roles in Europe, learning to build practical tools in Python. ADD-YOUR-LINKEDIN-LINK-HERE
+HR manager from India moving into HR-tech and recruitment operations roles in Europe, learning to build practical tools in Python. 
