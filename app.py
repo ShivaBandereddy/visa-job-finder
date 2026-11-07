@@ -125,24 +125,56 @@ Company: {job.get("company", "")}
 Job description: {clean_text(job.get("snippet", ""))}
 """
 LOCAL_BOARDS = {
-    "Ireland": [("IrishJobs", "https://www.irishjobs.ie/jobs?q={kw_plus}")],
+    "United Kingdom": [
+        ("Reed", "https://www.reed.co.uk/jobs?keywords={kw_plus}&location={place_plus}"),
+        ("Totaljobs", "https://www.totaljobs.com/jobs/{kw_slug}{in_city}"),
+        ("Indeed UK", "https://uk.indeed.com/jobs?q={kw_plus}&l={place_plus}"),
+    ],
+    "Scotland": [
+        ("s1jobs", "https://www.s1jobs.com/jobs{city_path}/?Keywords={kw_plus}"),
+        ("Reed", "https://www.reed.co.uk/jobs?keywords={kw_plus}&location={place_plus}"),
+        ("Indeed UK", "https://uk.indeed.com/jobs?q={kw_plus}&l={place_plus}"),
+    ],
+    "Ireland": [
+        ("IrishJobs", "https://www.irishjobs.ie/jobs/{kw_slug}"),
+        ("Indeed IE", "https://ie.indeed.com/jobs?q={kw_plus}&l={place_plus}"),
+    ],
+    "Netherlands": [
+        ("Nationale Vacaturebank", "https://www.nationalevacaturebank.nl/vacatures?query={kw_plus}"),
+        ("Indeed NL", "https://nl.indeed.com/jobs?q={kw_plus}&l={place_plus}"),
+    ],
     "Switzerland": [("Jobs.ch", "https://www.jobs.ch/en/vacancies/?term={kw_plus}&location={place_plus}")],
     "Poland": [("Pracuj.pl", "https://www.pracuj.pl/praca/{kw_path}")],
-    "Australia": [("Seek", "https://www.seek.com.au/jobs?keywords={kw_plus}&where={place_plus}")],
+    "Australia": [
+        ("Seek", "https://www.seek.com.au/jobs?keywords={kw_plus}&where={place_plus}"),
+        ("Indeed AU", "https://au.indeed.com/jobs?q={kw_plus}&l={place_plus}"),
+    ],
     "New Zealand": [("Seek NZ", "https://www.seek.co.nz/jobs?keywords={kw_plus}&where={place_plus}")],
     "Norway": [("Finn.no", "https://www.finn.no/job/search?q={kw_plus}")],
     "Austria": [("karriere.at", "https://www.karriere.at/jobs?keywords={kw_plus}&locations={place_plus}")],
+    "Canada": [
+        ("Job Bank", "https://www.jobbank.gc.ca/jobsearch/jobsearch?searchstring={kw_plus}&locationstring={place_plus}&locationparam="),
+        ("Indeed CA", "https://ca.indeed.com/jobs?q={kw_plus}&l={place_plus}"),
+    ],
+    "Singapore": [
+        ("JobStreet", "https://sg.jobstreet.com/{kw_slug}-jobs"),
+        ("Indeed SG", "https://sg.indeed.com/jobs?q={kw_plus}&l={place_plus}"),
+    ],
 }
 
 
 def local_board_links(country, keyword, city):
     place = city if city else ("Scotland" if country == "Scotland" else "")
+    city_slug = re.sub(r"[^a-z0-9]+", "-", city.lower()).strip("-")
     values = {
         "kw_plus": quote_plus(keyword),
         "kw_path": quote(keyword),
+        "kw_slug": re.sub(r"[^a-z0-9]+", "-", keyword.lower()).strip("-"),
         "place_plus": quote_plus(place),
+        "in_city": f"/in-{city_slug}" if city_slug else "",
+        "city_path": f"/{city_slug}" if city_slug else "",
     }
-    return [(label, template.format(**values)) for label, template in LOCAL_BOARDS.get(country, [])]
+return [(label, template.format(**values)) for label, template in LOCAL_BOARDS.get(country, [])]
 
 # ---------- Sidebar: search filters ----------
 st.sidebar.header("🔎 Search filters")
