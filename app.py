@@ -3,7 +3,21 @@ import streamlit as st
 import requests
 import pandas as pd
 
-st.title("Visa Sponsorship Job Finder")
+st.set_page_config(page_title="Visa Job Finder", page_icon="🌍", layout="wide")
+st.markdown(
+    """
+<style>
+.hero {background: linear-gradient(135deg, #4F46E5, #7C3AED); padding: 28px 32px; border-radius: 16px; margin-bottom: 24px;}
+.hero h1 {color: white; margin: 0; font-size: 2rem;}
+.hero p {color: #E0E7FF; margin: 8px 0 0 0; font-size: 1.05rem;}
+</style>
+<div class="hero">
+<h1>🌍 Visa Sponsorship Job Finder</h1>
+<p>Find HR and recruitment jobs in Europe, check sponsors, match your CV and track applications.</p>
+</div>
+""",
+    unsafe_allow_html=True,
+)
 if "tracker" not in st.session_state:
     st.session_state["tracker"] = pd.DataFrame(
         columns=["Title", "Company", "Location", "Link", "Status"]
