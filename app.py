@@ -55,7 +55,7 @@ def fetch_jobs(api_key, keyword, location):
         return response.status_code, []
     return 200, response.json().get("jobs", [])
 
-GEMINI_MODEL = "gemini-2.5-flash-lite"
+GEMINI_MODEL = "gemini-3.5-flash-lite"
 def ask_gemini(prompt):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
     headers = {"x-goog-api-key": st.secrets["GEMINI_API_KEY"]}
