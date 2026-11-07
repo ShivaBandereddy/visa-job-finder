@@ -1,4 +1,5 @@
 import re
+from urllib.parse import quote_plus
 import streamlit as st
 import requests
 import pandas as pd
@@ -209,11 +210,24 @@ with tab_jobs:
 
                 st.write(clean_text(job.get("snippet", ""))[:300])
 
-                col1, col2, col3, col4 = st.columns(4)
+                google_url = "https://www.google.com/search?q=" + quote_plus(
+                    f"{job.get('title', '')} {job.get('company', '')} apply"
+                )
+
+                linkedin_url = (
+                    "https://www.linkedin.com/jobs/search/?keywords="
+                    + quote_plus(f"{job.get('title', '')} {job.get('company', '')}")
+                    + "&location="
+                    + quote_plus(job.get("location", "") or "")
+                )
+
+                col1, col2, col3, col4, col5, col6 = st.columns(6)
                 col1.link_button("Open job", job.get("link", ""), use_container_width=True)
-                match_clicked = col2.button("Match score", key=f"match_{i}", use_container_width=True)
-                letter_clicked = col3.button("Cover letter", key=f"letter_{i}", use_container_width=True)
-                save_clicked = col4.button("Save job", key=f"save_{i}", use_container_width=True)
+                col2.link_button("🔍 Google", google_url, use_container_width=True)
+                col3.link_button("💼 LinkedIn", linkedin_url, use_container_width=True)
+                match_clicked = col4.button("Match score", key=f"match_{i}", use_container_width=True)
+                letter_clicked = col5.button("Cover letter", key=f"letter_{i}", use_container_width=True)
+                save_clicked = col6.button("Save job", key=f"save_{i}", use_container_width=True)
 
                 if match_clicked:
                     if not cv_text:
