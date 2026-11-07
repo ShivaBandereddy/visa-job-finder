@@ -55,6 +55,15 @@ def fetch_jobs(api_key, keyword, location):
         return response.status_code, []
     return 200, response.json().get("jobs", [])
 
+GEMINI_MODEL = "gemini-2.5-flash-lite"
+def ask_gemini(prompt):
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
+    headers = {"x-goog-api-key": st.secrets["GEMINI_API_KEY"]}
+    body = {"contents": [{"parts": [{"text": prompt}]}]}
+    response = requests.post(url, headers=headers, json=body, timeout=60)
+    if response.status_code != 200:
+        return f"Gemini error {response.status_code}: {response.text[:200]}"
+    return response.json()["candidates"][0]["content"]["parts"][0]["text"]
 
 country = st.selectbox("Select country", countries)
 
@@ -68,6 +77,14 @@ city = st.text_input("City (optional, e.g. Amsterdam, Edinburgh, Warsaw)", "")
 only_visa = st.checkbox("Show only jobs mentioning visa / relocation")
 only_sponsor = st.checkbox("Show only licensed sponsors (UK only)")
 
+cv_text = st.text_area(
+    "Paste your CV text here (optional, used for match score later)",
+    height=200,
+)
+
+if cv_text:
+    st.caption(f"CV loaded: {len(cv_text.split())} words")
+    
 if st.button("Search jobs"):
     location = city if city else country
     status, jobs = fetch_jobs(st.secrets["JOOBLE_API_KEY"], keyword, location)
@@ -103,3 +120,5 @@ if st.button("Search jobs"):
         st.write(clean_text(job.get("snippet", ""))[:300])
         st.link_button("Open job", job.get("link", ""))
         st.divider()
+        if st.button("Test Gemini"):
+            st.write(ask_gemini("Say hello in one short sentence."))
