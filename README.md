@@ -1,9 +1,8 @@
-
 # Visa Sponsorship Job Finder
 
-A free web app that helps HR and recruitment professionals find jobs in Europe from employers that mention visa sponsorship or relocation, check whether a UK employer is a licensed sponsor, and track applications in one place.
+A free web app that helps HR and recruitment professionals find jobs in Europe from employers that mention visa sponsorship or relocation, check whether a UK employer is a licensed sponsor, match a CV to each job, draft a cover letter and track applications in one place.
 
-**Live app:** https://visa-job-finder-shiva.streamlit.app
+**Live app:** https://visa-job-finder-shiva.streamlit.app/
 
 ## The problem
 
@@ -11,19 +10,21 @@ Moving abroad for an HR or recruitment role means searching many job boards, rea
 
 ## What it does
 
-- **Search jobs** by country, role keyword (HR, Recruiter, Talent Acquisition, People Operations, Payroll, Onboarding, HR Manager) and optional city.
+- **Search jobs** by country, role keyword (HR, Recruiter, Talent Acquisition, People Operations, Payroll, Onboarding, HR Manager) and optional city, using filters in a sidebar.
 - **Visa / relocation filter:** flags jobs whose title or description mentions visa sponsorship, relocation, work permit or blue card.
 - **UK licensed sponsor check:** matches the employer name against the official UK Register of Licensed Sponsors (Workers) and shows the visa routes.
 - **CV match score:** paste your CV text and get a 0-100 score with reasons and gaps, written by the Gemini API.
 - **Tailored cover letter:** generates an editable draft of up to 250 words, using only facts from your CV.
-- **Application tracker:** save jobs, set status (Saved, Applied, Interview, Offer, Rejected), then download or reload your tracker as a CSV file.
+- **Find the original posting:** each job card has Google and LinkedIn search buttons, so you can reach the employer's own career page and apply there.
+- **Application tracker:** save jobs, set status (Saved, Applied, Interview, Offer, Rejected), see a count per status, then download or reload your tracker as a CSV file.
 
 ## How it works
 
 1. The app sends your keyword and location to the Jooble job search API.
 2. Results are filtered in Python (visa words, sponsor list) and stored in `st.session_state`, so buttons do not wipe the list.
-3. For the match score and cover letter, the app sends your CV text and the job text to the Gemini API with a structured prompt.
-4. The tracker is a table in the browser session. You download it as CSV and upload it next time.
+3. Each job is shown as a card with badges for visa mentions and licensed sponsors.
+4. For the match score and cover letter, the app sends your CV text and the job text to the Gemini API with a structured prompt.
+5. The tracker is a table in the browser session. You download it as CSV and upload it next time.
 
 ## Tech stack (all free)
 
@@ -61,8 +62,10 @@ Never commit API keys to GitHub.
 
 - The sponsor check covers the UK only. Company names are matched after simple cleaning, so some employers with different legal names are missed.
 - Jooble returns a short job snippet, so the visa filter and match score can miss details found only in the full job ad.
-- Free API limits apply. Prolonged use may return rate limit errors.
+- Some job board links (like Jooble) may block direct opening from external apps, so each card also has Google and LinkedIn search buttons.
+- Free API limits apply. Heavy use may return rate limit errors.
 - AI output can be wrong. Always read the match score reasons and cover letter before using them.
+- The tracker is not stored on the server. Download the CSV before you leave.
 
 ## Roadmap
 
@@ -73,7 +76,7 @@ Never commit API keys to GitHub.
 
 ## Screenshots
 
-ADD-SCREENSHOTS-HERE
+
 
 ## About me
 
