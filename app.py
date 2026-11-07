@@ -25,7 +25,8 @@ def clean_text(text):
 def mentions_visa(job):
     text = (job.get("title", "") + " " + clean_text(job.get("snippet", ""))).lower()
     return any(word in text for word in VISA_WORDS)
-
+def sponsor_routes(job, sponsors):
+    return sponsors.get(normalize(job.get("company", "")))
 
 def normalize(name):
     name = (name or "").lower()
@@ -74,14 +75,30 @@ if st.button("Search jobs"):
     if status != 200:
         st.error(f"Error {status}. Check your key in Secrets.")
         st.stop()
+
+    sponsors = load_uk_sponsors() if country == "United Kingdom" else {}
+
+    if only_sponsor:
+        if country != "United Kingdom":
+            st.info("Sponsor check works for the UK only.")
+        else:
+            jobs = [job for job in jobs if sponsor_routes(job, sponsors)]
+
     if only_visa:
         jobs = [job for job in jobs if mentions_visa(job)]
+
     st.write(f"Found {len(jobs)} jobs")
 
     for job in jobs:
         st.subheader(job.get("title", "No title"))
+
         if mentions_visa(job):
             st.success("Visa / relocation mentioned ✅")
+
+        routes = sponsor_routes(job, sponsors)
+        if routes:
+            st.success(f"Licensed UK sponsor ✅ {routes}")
+
         st.write(job.get("company", ""), "-", job.get("location", ""))
         st.write(clean_text(job.get("snippet", ""))[:300])
         st.link_button("Open job", job.get("link", ""))
