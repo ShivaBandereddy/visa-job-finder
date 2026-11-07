@@ -127,7 +127,6 @@ Job description: {clean_text(job.get("snippet", ""))}
 LOCAL_BOARDS = {
     "United Kingdom": [
         ("Reed", "https://www.reed.co.uk/jobs?keywords={kw_plus}&location={place_plus}"),
-        ("Totaljobs", "https://www.totaljobs.com/jobs/{kw_slug}{in_city}"),
         ("Indeed UK", "https://uk.indeed.com/jobs?q={kw_plus}&l={place_plus}"),
     ],
     "Scotland": [
@@ -143,18 +142,62 @@ LOCAL_BOARDS = {
         ("Nationale Vacaturebank", "https://www.nationalevacaturebank.nl/vacatures?query={kw_plus}"),
         ("Indeed NL", "https://nl.indeed.com/jobs?q={kw_plus}&l={place_plus}"),
     ],
-    "Switzerland": [("Jobs.ch", "https://www.jobs.ch/en/vacancies/?term={kw_plus}&location={place_plus}")],
-    "Poland": [("Pracuj.pl", "https://www.pracuj.pl/praca/{kw_path}")],
+    "Luxembourg": [
+        ("Indeed LU", "https://lu.indeed.com/jobs?q={kw_plus}&l={place_plus}"),
+        ("Moovijob (site)", "https://www.moovijob.com/"),
+        ("EURES (site)", "https://eures.europa.eu/"),
+    ],
+    "Belgium": [
+        ("VDAB", "https://www.vdab.be/vindeenjob/vacatures?trefwoord={kw_plus}"),
+        ("Indeed BE", "https://be.indeed.com/jobs?q={kw_plus}&l={place_plus}"),
+        ("Jobat (site)", "https://www.jobat.be/"),
+    ],
+    "Austria": [
+        ("karriere.at", "https://www.karriere.at/jobs?keywords={kw_plus}&locations={place_plus}"),
+        ("Indeed AT", "https://at.indeed.com/jobs?q={kw_plus}&l={place_plus}"),
+    ],
+    "Switzerland": [
+        ("Jobs.ch", "https://www.jobs.ch/en/vacancies/?term={kw_plus}&location={place_plus}"),
+        ("Indeed CH", "https://ch.indeed.com/jobs?q={kw_plus}&l={place_plus}"),
+    ],
+    "Czech Republic": [
+        ("Jobs.cz", "https://www.jobs.cz/prace{city_path}/?q%5B%5D={kw_plus}"),
+        ("Prace.cz", "https://www.prace.cz/nabidky/?q={kw_plus}"),
+    ],
+    "Poland": [
+        ("Pracuj.pl", "https://www.pracuj.pl/praca/{kw_path}"),
+        ("Indeed PL", "https://pl.indeed.com/jobs?q={kw_plus}&l={place_plus}"),
+    ],
+    "Portugal": [
+        ("Net-Empregos", "https://www.net-empregos.com/pesquisa-empregos.asp?chaves={kw_plus}&cidade={city_slug}"),
+        ("Indeed PT", "https://pt.indeed.com/jobs?q={kw_plus}&l={place_plus}"),
+    ],
+    "Malta": [
+        ("KeepMePosted (site)", "https://keepmeposted.com.mt/"),
+        ("Konnekt (site)", "https://www.konnekt.com/"),
+        ("EURES (site)", "https://eures.europa.eu/"),
+    ],
+    "Sweden": [("Platsbanken (site)", "https://arbetsformedlingen.se/platsbanken/")],
+    "Norway": [("Finn.no", "https://www.finn.no/job/search?q={kw_plus}")],
+    "Finland": [("Duunitori (site)", "https://duunitori.fi/")],
+    "Estonia": [
+        ("CV Keskus (site)", "https://www.cvkeskus.ee/"),
+        ("CV.ee (site)", "https://www.cv.ee/"),
+        ("Tootukassa (site)", "https://www.tootukassa.ee/toopakkumised"),
+    ],
+    "Latvia": [
+        ("CV.lv (site)", "https://www.cv.lv/lv"),
+        ("CVmarket (site)", "https://www.cvmarket.lv"),
+        ("NVA (site)", "https://cvvp.nva.gov.lv/#/pub/"),
+    ],
+    "Canada": [
+        ("Job Bank", "https://www.jobbank.gc.ca/jobsearch/jobsearch?searchstring={kw_plus}&locationstring={place_plus}"),
+        ("Indeed CA", "https://ca.indeed.com/jobs?q={kw_plus}&l={place_plus}"),
+    ],
+    "New Zealand": [("Seek NZ", "https://www.seek.co.nz/jobs?keywords={kw_plus}&where={place_plus}")],
     "Australia": [
         ("Seek", "https://www.seek.com.au/jobs?keywords={kw_plus}&where={place_plus}"),
         ("Indeed AU", "https://au.indeed.com/jobs?q={kw_plus}&l={place_plus}"),
-    ],
-    "New Zealand": [("Seek NZ", "https://www.seek.co.nz/jobs?keywords={kw_plus}&where={place_plus}")],
-    "Norway": [("Finn.no", "https://www.finn.no/job/search?q={kw_plus}")],
-    "Austria": [("karriere.at", "https://www.karriere.at/jobs?keywords={kw_plus}&locations={place_plus}")],
-    "Canada": [
-        ("Job Bank", "https://www.jobbank.gc.ca/jobsearch/jobsearch?searchstring={kw_plus}&locationstring={place_plus}&locationparam="),
-        ("Indeed CA", "https://ca.indeed.com/jobs?q={kw_plus}&l={place_plus}"),
     ],
     "Singapore": [
         ("JobStreet", "https://sg.jobstreet.com/{kw_slug}-jobs"),
@@ -171,7 +214,7 @@ def local_board_links(country, keyword, city):
         "kw_path": quote(keyword),
         "kw_slug": re.sub(r"[^a-z0-9]+", "-", keyword.lower()).strip("-"),
         "place_plus": quote_plus(place),
-        "in_city": f"/in-{city_slug}" if city_slug else "",
+        "city_slug": city_slug,
         "city_path": f"/{city_slug}" if city_slug else "",
     }
     return [(label, template.format(**values)) for label, template in LOCAL_BOARDS.get(country, [])]
