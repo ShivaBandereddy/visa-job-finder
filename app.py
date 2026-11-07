@@ -174,7 +174,7 @@ def local_board_links(country, keyword, city):
         "in_city": f"/in-{city_slug}" if city_slug else "",
         "city_path": f"/{city_slug}" if city_slug else "",
     }
-return [(label, template.format(**values)) for label, template in LOCAL_BOARDS.get(country, [])]
+    return [(label, template.format(**values)) for label, template in LOCAL_BOARDS.get(country, [])]
 
 # ---------- Sidebar: search filters ----------
 st.sidebar.header("🔎 Search filters")
