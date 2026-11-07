@@ -171,15 +171,18 @@ if "jobs" in st.session_state:
 
         if i in st.session_state["scores"]:
             st.info(st.session_state["scores"][i])
+
         if st.button("Cover letter", key=f"letter_{i}"):
             if not cv_text:
                 st.warning("Paste your CV text above first.")
             else:
                 with st.spinner("Writing cover letter..."):
                     st.session_state["letters"][i] = ask_gemini(make_letter_prompt(cv_text, job))
+
         if i in st.session_state["letters"]:
             st.text_area("Cover letter draft (edit and copy)", st.session_state["letters"][i], height=300, key=f"letter_box_{i}")
-                if st.button("Save job", key=f"save_{i}"):
+
+        if st.button("Save job", key=f"save_{i}"):
             link = job.get("link", "")
             tracker = st.session_state["tracker"]
             if link in tracker["Link"].values:
@@ -194,6 +197,7 @@ if "jobs" in st.session_state:
                 }])
                 st.session_state["tracker"] = pd.concat([tracker, new_row], ignore_index=True)
                 st.success("Saved to tracker ✅")
+
         st.divider()
 st.header("My Application Tracker")
 
