@@ -120,5 +120,5 @@ if st.button("Search jobs"):
         st.write(clean_text(job.get("snippet", ""))[:300])
         st.link_button("Open job", job.get("link", ""))
         st.divider()
-        if st.button("Test Gemini"):
+    if st.button("Test Gemini"):
             st.write(ask_gemini("Say hello in one short sentence."))
