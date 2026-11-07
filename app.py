@@ -4,7 +4,10 @@ import requests
 import pandas as pd
 
 st.title("Visa Sponsorship Job Finder")
-
+if "tracker" not in st.session_state:
+    st.session_state["tracker"] = pd.DataFrame(
+        columns=["Title", "Company", "Location", "Link", "Status"]
+    )
 countries = [
     "United Kingdom",
     "Ireland",
@@ -174,7 +177,47 @@ if "jobs" in st.session_state:
             else:
                 with st.spinner("Writing cover letter..."):
                     st.session_state["letters"][i] = ask_gemini(make_letter_prompt(cv_text, job))
-
         if i in st.session_state["letters"]:
             st.text_area("Cover letter draft (edit and copy)", st.session_state["letters"][i], height=300, key=f"letter_box_{i}")
+                if st.button("Save job", key=f"save_{i}"):
+            link = job.get("link", "")
+            tracker = st.session_state["tracker"]
+            if link in tracker["Link"].values:
+                st.info("Already saved.")
+            else:
+                new_row = pd.DataFrame([{
+                    "Title": job.get("title", ""),
+                    "Company": job.get("company", ""),
+                    "Location": job.get("location", ""),
+                    "Link": link,
+                    "Status": "Saved",
+                }])
+                st.session_state["tracker"] = pd.concat([tracker, new_row], ignore_index=True)
+                st.success("Saved to tracker ✅")
         st.divider()
+st.header("My Application Tracker")
+
+uploaded = st.file_uploader("Load a saved tracker CSV (optional)", type="csv")
+if uploaded is not None and st.button("Load this CSV"):
+    st.session_state["tracker"] = pd.read_csv(uploaded)
+
+edited = st.data_editor(
+    st.session_state["tracker"],
+    column_config={
+        "Status": st.column_config.SelectboxColumn(
+            "Status",
+            options=["Saved", "Applied", "Interview", "Offer", "Rejected"],
+        ),
+        "Link": st.column_config.LinkColumn("Link"),
+    },
+    num_rows="dynamic",
+    key="tracker_editor",
+)
+st.session_state["tracker"] = edited
+
+st.download_button(
+    "Download tracker CSV",
+    edited.to_csv(index=False),
+    "tracker.csv",
+    "text/csv",
+)
