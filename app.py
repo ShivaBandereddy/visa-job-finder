@@ -65,6 +65,23 @@ def ask_gemini(prompt):
         return f"Gemini error {response.status_code}: {response.text[:200]}"
     return response.json()["candidates"][0]["content"]["parts"][0]["text"]
 
+def make_prompt(cv, job):
+    return f"""You are an experienced HR recruiter. Compare this CV with this job.
+Reply exactly in this format:
+Score: <number from 0 to 100>
+Reasons:
+- three short reasons why the CV fits
+Gaps:
+- two short missing skills or requirements
+
+CV:
+{cv[:4000]}
+
+Job title: {job.get("title", "")}
+Company: {job.get("company", "")}
+Job description: {clean_text(job.get("snippet", ""))}
+"""
+    
 country = st.selectbox("Select country", countries)
 
 keyword = st.selectbox(
@@ -93,20 +110,27 @@ if st.button("Search jobs"):
         st.error(f"Error {status}. Check your key in Secrets.")
         st.stop()
 
-    sponsors = load_uk_sponsors() if country == "United Kingdom" else {}
-
     if only_sponsor:
         if country != "United Kingdom":
             st.info("Sponsor check works for the UK only.")
         else:
-            jobs = [job for job in jobs if sponsor_routes(job, sponsors)]
+            sponsors_now = load_uk_sponsors()
+            jobs = [job for job in jobs if sponsor_routes(job, sponsors_now)]
 
     if only_visa:
         jobs = [job for job in jobs if mentions_visa(job)]
 
+    st.session_state["jobs"] = jobs
+    st.session_state["searched_country"] = country
+    st.session_state["scores"] = {}
+
+if "jobs" in st.session_state:
+    jobs = st.session_state["jobs"]
+    sponsors = load_uk_sponsors() if st.session_state["searched_country"] == "United Kingdom" else {}
+
     st.write(f"Found {len(jobs)} jobs")
 
-    for job in jobs:
+    for i, job in enumerate(jobs):
         st.subheader(job.get("title", "No title"))
 
         if mentions_visa(job):
@@ -119,6 +143,15 @@ if st.button("Search jobs"):
         st.write(job.get("company", ""), "-", job.get("location", ""))
         st.write(clean_text(job.get("snippet", ""))[:300])
         st.link_button("Open job", job.get("link", ""))
+
+        if st.button("Match score", key=f"match_{i}"):
+            if not cv_text:
+                st.warning("Paste your CV text above first.")
+            else:
+                with st.spinner("Asking Gemini..."):
+                    st.session_state["scores"][i] = ask_gemini(make_prompt(cv_text, job))
+
+        if i in st.session_state["scores"]:
+            st.info(st.session_state["scores"][i])
+
         st.divider()
-if st.button("Test Gemini"):
-            st.write(ask_gemini("Say hello in one short sentence."))
