@@ -27,15 +27,13 @@ if "tracker" not in st.session_state:
     )
 
 countries = [
-    "United Kingdom",
-    "Ireland",
-    "Netherlands",
-    "Poland",
-    "Portugal",
-    "Malta",
-    "Sweden",
-    "Norway",
+    "United Kingdom", "Scotland", "Ireland", "Netherlands", "Luxembourg", "Belgium",
+    "Austria", "Switzerland", "Czech Republic", "Poland", "Portugal", "Malta",
+    "Sweden", "Norway", "Finland", "Estonia", "Latvia",
+    "Canada", "New Zealand", "Australia", "Singapore",
 ]
+
+UK_COUNTRIES = ["United Kingdom", "Scotland"]
 
 VISA_WORDS = ["visa sponsor", "sponsorship", "sponsor", "relocation", "relocate", "work permit", "blue card"]
 
@@ -133,10 +131,16 @@ st.sidebar.header("🔎 Search filters")
 
 country = st.sidebar.selectbox("Country", countries)
 
-keyword = st.sidebar.selectbox(
-    "Role keyword",
-    ["HR", "Recruiter", "Talent Acquisition", "People Operations", "Payroll", "Onboarding", "HR Manager"],
+keyword_options = [
+    "HR", "Recruiter", "Talent Acquisition", "People Operations", "Payroll", "Onboarding", "HR Manager",
+    "People Analytics", "HR Analytics", "HR Technology", "HRIS",
+    "AI Recruiter", "Talent Intelligence", "AI Trainer", "Prompt Engineer", "AI Operations",
+]
+keyword_choice = st.sidebar.selectbox("Role keyword", keyword_options)
+custom_keyword = st.sidebar.text_input(
+    "Or type your own keyword (optional)", "", placeholder="e.g. HR AI specialist"
 )
+keyword = custom_keyword.strip() if custom_keyword.strip() else keyword_choice
 
 city = st.sidebar.text_input("City (optional)", "", placeholder="e.g. Amsterdam, Edinburgh")
 
@@ -168,7 +172,7 @@ with tab_jobs:
             st.error(f"Error {status}. Check your key in Secrets.")
         else:
             if only_sponsor:
-                if country != "United Kingdom":
+                if country not in UK_COUNTRIES:
                     st.info("Sponsor check works for the UK only.")
                 else:
                     sponsors_now = load_uk_sponsors()
@@ -189,7 +193,7 @@ with tab_jobs:
         st.warning("No jobs matched. Try another city, or turn off the filters.")
     else:
         jobs = st.session_state["jobs"]
-        sponsors = load_uk_sponsors() if st.session_state["searched_country"] == "United Kingdom" else {}
+        sponsors = load_uk_sponsors() if st.session_state["searched_country"] in UK_COUNTRIES else {}
 
         st.subheader(f"{len(jobs)} jobs found")
 
