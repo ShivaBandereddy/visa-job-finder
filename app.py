@@ -99,6 +99,20 @@ cv_text = st.text_area(
     height=200,
 )
 
+def make_letter_prompt(cv, job):
+    return f"""You are an experienced HR professional writing a job application.
+Write a tailored cover letter in English, maximum 250 words, professional but warm.
+Use ONLY facts that appear in the CV. Do not invent skills, employers or numbers.
+Start with "Dear Hiring Manager," and end with "Kind regards,\\n[Your Name]".
+
+CV:
+{cv[:4000]}
+
+Job title: {job.get("title", "")}
+Company: {job.get("company", "")}
+Job description: {clean_text(job.get("snippet", ""))}
+"""
+
 if cv_text:
     st.caption(f"CV loaded: {len(cv_text.split())} words")
     
@@ -123,6 +137,7 @@ if st.button("Search jobs"):
     st.session_state["jobs"] = jobs
     st.session_state["searched_country"] = country
     st.session_state["scores"] = {}
+    st.session_state["letters"] = {}
 
 if "jobs" in st.session_state:
     jobs = st.session_state["jobs"]
@@ -153,5 +168,13 @@ if "jobs" in st.session_state:
 
         if i in st.session_state["scores"]:
             st.info(st.session_state["scores"][i])
+        if st.button("Cover letter", key=f"letter_{i}"):
+            if not cv_text:
+                st.warning("Paste your CV text above first.")
+            else:
+                with st.spinner("Writing cover letter..."):
+                    st.session_state["letters"][i] = ask_gemini(make_letter_prompt(cv_text, job))
 
+        if i in st.session_state["letters"]:
+            st.text_area("Cover letter draft (edit and copy)", st.session_state["letters"][i], height=300, key=f"letter_box_{i}")
         st.divider()
