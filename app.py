@@ -47,9 +47,9 @@ def clean_text(text):
 
 
 def normalize(name):
-    name = (name or "").lower()
+    name = re.sub(r"\b([bn])\.?\s?v\b\.?", r"\1v", name)
     name = re.sub(r"[^a-z0-9 ]", " ", name)
-    words = [w for w in name.split() if w not in ("ltd", "limited", "plc", "llp", "inc", "llc")]
+    words = [w for w in name.split() if w not in ("ltd", "limited", "plc", "llp", "inc", "llc", "bv", "nv")]
     return " ".join(words)
 
 
@@ -71,6 +71,21 @@ def load_uk_sponsors():
     df["key"] = df["Organisation Name"].apply(normalize)
     routes = df.groupby("key")["Route"].apply(lambda r: ", ".join(sorted(set(r.dropna()))))
     return routes.to_dict()
+
+
+@st.cache_data
+def load_nl_sponsors():
+    df = pd.read_csv("nl_sponsors.csv", encoding="utf-8-sig")
+    keys = df["Organisation Name"].apply(normalize)
+    return {key: "IND recognised" for key in keys if key}
+
+
+def get_sponsor_list(country):
+    if country in UK_COUNTRIES:
+        return load_uk_sponsors(), "UK"
+    if country == "Netherlands":
+        return load_nl_sponsors(), "NL"
+    return None, ""
 
 
 @st.cache_data(ttl=3600)
@@ -238,7 +253,7 @@ keyword = custom_keyword.strip() if custom_keyword.strip() else keyword_choice
 city = st.sidebar.text_input("City (optional)", "", placeholder="e.g. Amsterdam, Edinburgh")
 
 only_visa = st.sidebar.checkbox("Only visa / relocation jobs")
-only_sponsor = st.sidebar.checkbox("Only licensed sponsors (UK only)")
+only_sponsor = st.sidebar.checkbox("Only recognised sponsors (UK, Scotland, Netherlands)")
 
 search_clicked = st.sidebar.button("Search jobs", type="primary", use_container_width=True)
 
@@ -265,10 +280,10 @@ with tab_jobs:
             st.error(f"Error {status}. Check your key in Secrets.")
         else:
             if only_sponsor:
-                if country not in UK_COUNTRIES:
-                    st.info("Sponsor check works for the UK only.")
+                sponsors_now, _ = get_sponsor_list(country)
+                if sponsors_now is None:
+                    st.info("Sponsor check works for UK, Scotland and Netherlands only.")
                 else:
-                    sponsors_now = load_uk_sponsors()
                     jobs = [job for job in jobs if sponsor_routes(job, sponsors_now)]
 
             if only_visa:
@@ -288,7 +303,8 @@ with tab_jobs:
         st.warning("No jobs matched. Try another city, or turn off the filters.")
     else:
         jobs = st.session_state["jobs"]
-        sponsors = load_uk_sponsors() if st.session_state["searched_country"] in UK_COUNTRIES else {}
+        sponsors, sponsor_label = get_sponsor_list(st.session_state["searched_country"])
+        sponsors = sponsors or {}
 
         st.subheader(f"{len(jobs)} jobs found")
         board_links = local_board_links(
@@ -312,7 +328,7 @@ with tab_jobs:
                 if mentions_visa(job):
                     badges.append(":green-badge[✅ Visa / relocation]")
                 if routes:
-                    badges.append(f":blue-badge[🛂 UK sponsor: {routes}]")
+                    badges.append(f":blue-badge[🛂 {sponsor_label} sponsor: {routes}]")
                 if badges:
                     st.markdown(" ".join(badges))
 
