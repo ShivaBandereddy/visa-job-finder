@@ -38,6 +38,8 @@ countries = [
 
 VISA_WORDS = ["visa sponsor", "sponsorship", "sponsor", "relocation", "relocate", "work permit", "blue card"]
 
+STATUSES = ["Saved", "Applied", "Interview", "Offer", "Rejected"]
+
 GEMINI_MODEL = "gemini-3.5-flash-lite"
 
 
@@ -142,127 +144,156 @@ only_sponsor = st.sidebar.checkbox("Only licensed sponsors (UK only)")
 
 search_clicked = st.sidebar.button("Search jobs", type="primary", use_container_width=True)
 
-# ---------- Main page: CV box ----------
-cv_text = st.text_area(
-    "Paste your CV text here (remove phone, address and email first)",
-    height=180,
-)
+st.sidebar.caption("Free API limits apply. Use Match score and Cover letter only on jobs you like.")
 
-if cv_text:
-    st.caption(f"CV loaded: {len(cv_text.split())} words")
+# ---------- Tabs ----------
+tab_jobs, tab_tracker = st.tabs(["🔎 Job results", "📋 My tracker"])
 
-# ---------- Search ----------
-if search_clicked:
-    location = city if city else country
-    status, jobs = fetch_jobs(st.secrets["JOOBLE_API_KEY"], keyword, location)
+with tab_jobs:
+    with st.expander("📄 Your CV (used for match score and cover letter)", expanded=True):
+        cv_text = st.text_area(
+            "Paste your CV text here (remove phone, address and email first)",
+            height=180,
+        )
+        if cv_text:
+            st.caption(f"CV loaded: {len(cv_text.split())} words")
 
-    if status != 200:
-        st.error(f"Error {status}. Check your key in Secrets.")
-        st.stop()
+    # ----- Search -----
+    if search_clicked:
+        location = city if city else country
+        status, jobs = fetch_jobs(st.secrets["JOOBLE_API_KEY"], keyword, location)
 
-    if only_sponsor:
-        if country != "United Kingdom":
-            st.info("Sponsor check works for the UK only.")
+        if status != 200:
+            st.error(f"Error {status}. Check your key in Secrets.")
         else:
-            sponsors_now = load_uk_sponsors()
-            jobs = [job for job in jobs if sponsor_routes(job, sponsors_now)]
+            if only_sponsor:
+                if country != "United Kingdom":
+                    st.info("Sponsor check works for the UK only.")
+                else:
+                    sponsors_now = load_uk_sponsors()
+                    jobs = [job for job in jobs if sponsor_routes(job, sponsors_now)]
 
-    if only_visa:
-        jobs = [job for job in jobs if mentions_visa(job)]
+            if only_visa:
+                jobs = [job for job in jobs if mentions_visa(job)]
 
-    st.session_state["jobs"] = jobs
-    st.session_state["searched_country"] = country
-    st.session_state["scores"] = {}
-    st.session_state["letters"] = {}
+            st.session_state["jobs"] = jobs
+            st.session_state["searched_country"] = country
+            st.session_state["scores"] = {}
+            st.session_state["letters"] = {}
 
-# ---------- Results ----------
-if "jobs" in st.session_state:
-    jobs = st.session_state["jobs"]
-    sponsors = load_uk_sponsors() if st.session_state["searched_country"] == "United Kingdom" else {}
+    # ----- Results -----
+    if "jobs" not in st.session_state:
+        st.info("👈 Choose a country and role in the sidebar, then click **Search jobs**.")
+    elif len(st.session_state["jobs"]) == 0:
+        st.warning("No jobs matched. Try another city, or turn off the filters.")
+    else:
+        jobs = st.session_state["jobs"]
+        sponsors = load_uk_sponsors() if st.session_state["searched_country"] == "United Kingdom" else {}
 
-    st.write(f"Found {len(jobs)} jobs")
+        st.subheader(f"{len(jobs)} jobs found")
 
-    for i, job in enumerate(jobs):
-        st.subheader(job.get("title", "No title"))
+        for i, job in enumerate(jobs):
+            routes = sponsor_routes(job, sponsors)
 
-        if mentions_visa(job):
-            st.success("Visa / relocation mentioned ✅")
+            with st.container(border=True):
+                st.markdown(f"#### {job.get('title', 'No title')}")
+                st.caption(f"🏢 {job.get('company', '')}  ·  📍 {job.get('location', '')}")
 
-        routes = sponsor_routes(job, sponsors)
-        if routes:
-            st.success(f"Licensed UK sponsor ✅ {routes}")
+                badges = []
+                if mentions_visa(job):
+                    badges.append(":green-badge[✅ Visa / relocation]")
+                if routes:
+                    badges.append(f":blue-badge[🛂 UK sponsor: {routes}]")
+                if badges:
+                    st.markdown(" ".join(badges))
 
-        st.write(job.get("company", ""), "-", job.get("location", ""))
-        st.write(clean_text(job.get("snippet", ""))[:300])
-        st.link_button("Open job", job.get("link", ""))
+                st.write(clean_text(job.get("snippet", ""))[:300])
 
-        if st.button("Match score", key=f"match_{i}"):
-            if not cv_text:
-                st.warning("Paste your CV text above first.")
-            else:
-                with st.spinner("Asking Gemini..."):
-                    st.session_state["scores"][i] = ask_gemini(make_prompt(cv_text, job))
+                col1, col2, col3, col4 = st.columns(4)
+                col1.link_button("Open job", job.get("link", ""), use_container_width=True)
+                match_clicked = col2.button("Match score", key=f"match_{i}", use_container_width=True)
+                letter_clicked = col3.button("Cover letter", key=f"letter_{i}", use_container_width=True)
+                save_clicked = col4.button("Save job", key=f"save_{i}", use_container_width=True)
 
-        if i in st.session_state["scores"]:
-            st.info(st.session_state["scores"][i])
+                if match_clicked:
+                    if not cv_text:
+                        st.warning("Paste your CV text above first.")
+                    else:
+                        with st.spinner("Asking Gemini..."):
+                            st.session_state["scores"][i] = ask_gemini(make_prompt(cv_text, job))
 
-        if st.button("Cover letter", key=f"letter_{i}"):
-            if not cv_text:
-                st.warning("Paste your CV text above first.")
-            else:
-                with st.spinner("Writing cover letter..."):
-                    st.session_state["letters"][i] = ask_gemini(make_letter_prompt(cv_text, job))
+                if letter_clicked:
+                    if not cv_text:
+                        st.warning("Paste your CV text above first.")
+                    else:
+                        with st.spinner("Writing cover letter..."):
+                            st.session_state["letters"][i] = ask_gemini(make_letter_prompt(cv_text, job))
 
-        if i in st.session_state["letters"]:
-            st.text_area(
-                "Cover letter draft (edit and copy)",
-                st.session_state["letters"][i],
-                height=300,
-                key=f"letter_box_{i}",
-            )
+                if save_clicked:
+                    link = job.get("link", "")
+                    tracker = st.session_state["tracker"]
+                    if link in tracker["Link"].values:
+                        st.info("Already saved.")
+                    else:
+                        new_row = pd.DataFrame([{
+                            "Title": job.get("title", ""),
+                            "Company": job.get("company", ""),
+                            "Location": job.get("location", ""),
+                            "Link": link,
+                            "Status": "Saved",
+                        }])
+                        st.session_state["tracker"] = pd.concat([tracker, new_row], ignore_index=True)
+                        st.success("Saved to tracker ✅ (see the My tracker tab)")
 
-        if st.button("Save job", key=f"save_{i}"):
-            link = job.get("link", "")
-            tracker = st.session_state["tracker"]
-            if link in tracker["Link"].values:
-                st.info("Already saved.")
-            else:
-                new_row = pd.DataFrame([{
-                    "Title": job.get("title", ""),
-                    "Company": job.get("company", ""),
-                    "Location": job.get("location", ""),
-                    "Link": link,
-                    "Status": "Saved",
-                }])
-                st.session_state["tracker"] = pd.concat([tracker, new_row], ignore_index=True)
-                st.success("Saved to tracker ✅")
+                if i in st.session_state["scores"]:
+                    st.info(st.session_state["scores"][i])
 
-        st.divider()
+                if i in st.session_state["letters"]:
+                    st.text_area(
+                        "Cover letter draft (edit and copy)",
+                        st.session_state["letters"][i],
+                        height=300,
+                        key=f"letter_box_{i}",
+                    )
 
-# ---------- Tracker ----------
-st.header("My Application Tracker")
+with tab_tracker:
+    st.subheader("My Application Tracker")
 
-uploaded = st.file_uploader("Load a saved tracker CSV (optional)", type="csv")
-if uploaded is not None and st.button("Load this CSV"):
-    st.session_state["tracker"] = pd.read_csv(uploaded)
+    current = st.session_state["tracker"]
+    if "Status" in current.columns:
+        counts = current["Status"].value_counts()
+    else:
+        counts = {}
 
-edited = st.data_editor(
-    st.session_state["tracker"],
-    column_config={
-        "Status": st.column_config.SelectboxColumn(
-            "Status",
-            options=["Saved", "Applied", "Interview", "Offer", "Rejected"],
-        ),
-        "Link": st.column_config.LinkColumn("Link"),
-    },
-    num_rows="dynamic",
-    key="tracker_editor",
-)
-st.session_state["tracker"] = edited
+    metric_cols = st.columns(len(STATUSES))
+    for metric_col, status_name in zip(metric_cols, STATUSES):
+        metric_col.metric(status_name, int(counts.get(status_name, 0)))
 
-st.download_button(
-    "Download tracker CSV",
-    edited.to_csv(index=False),
-    "tracker.csv",
-    "text/csv",
-)
+    uploaded = st.file_uploader("Load a saved tracker CSV (optional)", type="csv")
+    if uploaded is not None and st.button("Load this CSV"):
+        st.session_state["tracker"] = pd.read_csv(uploaded)
+        st.rerun()
+
+    edited = st.data_editor(
+        st.session_state["tracker"],
+        column_config={
+            "Status": st.column_config.SelectboxColumn("Status", options=STATUSES),
+            "Link": st.column_config.LinkColumn("Link"),
+        },
+        num_rows="dynamic",
+        use_container_width=True,
+        key="tracker_editor",
+    )
+    st.session_state["tracker"] = edited
+
+    st.download_button(
+        "Download tracker CSV",
+        edited.to_csv(index=False),
+        "tracker.csv",
+        "text/csv",
+    )
+    st.caption("Your tracker is not stored on the server. Download the CSV before you leave.")
+
+# ---------- Footer ----------
+st.divider()
+st.caption("Built with Streamlit, Jooble API and Gemini API. Check every job and AI output yourself before applying.")
