@@ -1,5 +1,5 @@
 import re
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, quote
 import streamlit as st
 import requests
 import pandas as pd
@@ -124,7 +124,25 @@ Job title: {job.get("title", "")}
 Company: {job.get("company", "")}
 Job description: {clean_text(job.get("snippet", ""))}
 """
+LOCAL_BOARDS = {
+    "Ireland": [("IrishJobs", "https://www.irishjobs.ie/jobs?q={kw_plus}")],
+    "Switzerland": [("Jobs.ch", "https://www.jobs.ch/en/vacancies/?term={kw_plus}&location={place_plus}")],
+    "Poland": [("Pracuj.pl", "https://www.pracuj.pl/praca/{kw_path}")],
+    "Australia": [("Seek", "https://www.seek.com.au/jobs?keywords={kw_plus}&where={place_plus}")],
+    "New Zealand": [("Seek NZ", "https://www.seek.co.nz/jobs?keywords={kw_plus}&where={place_plus}")],
+    "Norway": [("Finn.no", "https://www.finn.no/job/search?q={kw_plus}")],
+    "Austria": [("karriere.at", "https://www.karriere.at/jobs?keywords={kw_plus}&locations={place_plus}")],
+}
 
+
+def local_board_links(country, keyword, city):
+    place = city if city else ("Scotland" if country == "Scotland" else "")
+    values = {
+        "kw_plus": quote_plus(keyword),
+        "kw_path": quote(keyword),
+        "place_plus": quote_plus(place),
+    }
+    return [(label, template.format(**values)) for label, template in LOCAL_BOARDS.get(country, [])]
 
 # ---------- Sidebar: search filters ----------
 st.sidebar.header("🔎 Search filters")
@@ -183,6 +201,8 @@ with tab_jobs:
 
             st.session_state["jobs"] = jobs
             st.session_state["searched_country"] = country
+            st.session_state["searched_keyword"] = keyword
+            st.session_state["searched_city"] = city
             st.session_state["scores"] = {}
             st.session_state["letters"] = {}
 
@@ -196,7 +216,16 @@ with tab_jobs:
         sponsors = load_uk_sponsors() if st.session_state["searched_country"] in UK_COUNTRIES else {}
 
         st.subheader(f"{len(jobs)} jobs found")
-
+        board_links = local_board_links(
+        st.session_state["searched_country"],
+        st.session_state.get("searched_keyword", ""),
+        st.session_state.get("searched_city", ""),
+        )
+        if board_links:
+            st.caption("🌐 Local job sites for this country (opens in a new tab)")
+            board_cols = st.columns(len(board_links))
+            for board_col, (label, url) in zip(board_cols, board_links):
+                board_col.link_button(label, url, use_container_width=True)
         for i, job in enumerate(jobs):
             routes = sponsor_routes(job, sponsors)
 
