@@ -209,7 +209,10 @@ LOCAL_BOARDS = {
         ("Job Bank", "https://www.jobbank.gc.ca/jobsearch/jobsearch?searchstring={kw_plus}&locationstring={place_plus}"),
         ("Indeed CA", "https://ca.indeed.com/jobs?q={kw_plus}&l={place_plus}"),
     ],
-    "New Zealand": [("Seek NZ", "https://www.seek.co.nz/jobs?keywords={kw_plus}&where={place_plus}")],
+    "New Zealand": [
+        ("Seek NZ", "https://www.seek.co.nz/jobs?keywords={kw_plus}&where={place_plus}"),
+        ("INZ employer check (site)", "https://immigration.govt.nz/work/requirements-for-work-visas/approved-employers/accredited-employer-list"),
+    ],
     "Australia": [
         ("Seek", "https://www.seek.com.au/jobs?keywords={kw_plus}&where={place_plus}"),
         ("Indeed AU", "https://au.indeed.com/jobs?q={kw_plus}&l={place_plus}"),
