@@ -35,6 +35,18 @@ countries = [
 
 UK_COUNTRIES = ["United Kingdom", "Scotland"]
 
+UK_NOTE = "UK Skilled Worker visa: salary must be at least £41,700/year or the going rate for the job, whichever is higher (some reduced options exist). Check gov.uk. (checked Nov 2026)"
+
+SALARY_NOTES = {
+    "United Kingdom": UK_NOTE,
+    "Scotland": UK_NOTE,
+    "Netherlands": "Netherlands highly skilled migrant 2026: at least €5,942/month gross if aged 30+, €4,357 if under 30 (excluding 8% holiday allowance). The employer must be an IND recognised sponsor. (checked Nov 2026)",
+    "Sweden": "Sweden work permit: salary must be at least SEK 34,470/month (90% of the median salary) for applications from 16 June 2026. EU Blue Card: SEK 52,000/month. Check Migrationsverket. (checked Nov 2026)",
+    "Norway": "Norway skilled-worker permit: about NOK 545,400/year (bachelor-level) or NOK 624,700/year (master-level) from May 2026, unless a collective agreement sets the pay. Sources differ, check UDI. (checked Nov 2026)",
+    "Singapore": "Singapore Employment Pass: at least S$5,600/month now (higher with age), rising to S$6,000 for new applications from 1 Jan 2027, plus 40 COMPASS points. Check MOM. (checked Nov 2026)",
+    "Malta": "Malta fast-track permits: Key Employee Initiative from €45,000/year, Specialist Employee Initiative from €30,000/year. Check Identità Malta. (checked Nov 2026)",
+}
+
 VISA_WORDS = ["visa sponsor", "sponsorship", "sponsor", "relocation", "relocate", "work permit", "blue card"]
 
 STATUSES = ["Saved", "Applied", "Interview", "Offer", "Rejected"]
@@ -396,7 +408,7 @@ with tab_jobs:
         status, jobs, source = fetch_jobs_for_country(country, keyword, city)
 
         if status != 200:
-            st.error(f"Error {status}. Check your key in Secrets.")
+            st.error(f"Jooble error {status}. The free key limit may be used up, or the key is wrong. Use the local job site buttons or the Google/LinkedIn search meanwhile.")
         else:
             if only_sponsor:
                 sponsors_now, _ = get_sponsor_list(country)
@@ -428,6 +440,9 @@ with tab_jobs:
 
         st.subheader(f"{len(jobs)} jobs found")
         st.caption(f"Source: {st.session_state.get('source', 'Jooble')}")
+        salary_note = SALARY_NOTES.get(st.session_state["searched_country"])
+        if salary_note:
+            st.info(salary_note)
         board_links = local_board_links(
         st.session_state["searched_country"],
         st.session_state.get("searched_keyword", ""),
