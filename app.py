@@ -47,6 +47,7 @@ def clean_text(text):
 
 
 def normalize(name):
+    name = (name or "").lower()
     name = re.sub(r"\b([bn])\.?\s?v\b\.?", r"\1v", name)
     name = re.sub(r"[^a-z0-9 ]", " ", name)
     words = [w for w in name.split() if w not in ("ltd", "limited", "plc", "llp", "inc", "llc", "bv", "nv")]
@@ -392,7 +393,7 @@ with tab_jobs:
 
     # ----- Search -----
     if search_clicked:
-                status, jobs, source = fetch_jobs_for_country(country, keyword, city)
+            status, jobs, source = fetch_jobs_for_country(country, keyword, city)
 
         if status != 200:
             st.error(f"Error {status}. Check your key in Secrets.")
