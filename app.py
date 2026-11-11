@@ -97,6 +97,122 @@ def fetch_jobs(api_key, keyword, location):
         return response.status_code, []
     return 200, response.json().get("jobs", [])
 
+def make_job(title, company, location, snippet, link):
+    return {
+        "title": title or "",
+        "company": company or "",
+        "location": location or "",
+        "snippet": (snippet or "")[:2000],
+        "link": link or "",
+    }
+
+
+@st.cache_data(ttl=3600)
+def fetch_sweden(keyword, city):
+    query = f"{keyword} {city}".strip()
+    try:
+        response = requests.get(
+            "https://jobsearch.api.jobtechdev.se/search",
+            params={"q": query, "limit": 50},
+            headers={"accept": "application/json"},
+            timeout=20,
+        )
+    except requests.RequestException:
+        return 0, []
+    if response.status_code != 200:
+        return response.status_code, []
+    jobs = []
+    for hit in response.json().get("hits", []):
+        address = hit.get("workplace_address") or {}
+        description = hit.get("description") or {}
+        link = hit.get("webpage_url") or f"https://arbetsformedlingen.se/platsbanken/annonser/{hit.get('id', '')}"
+        jobs.append(make_job(
+            hit.get("headline"),
+            (hit.get("employer") or {}).get("name"),
+            address.get("municipality") or address.get("city") or address.get("region"),
+            description.get("text"),
+            link,
+        ))
+    return 200, jobs
+
+
+@st.cache_data(ttl=3600)
+def fetch_singapore(keyword):
+    try:
+        response = requests.get(
+            "https://api.mycareersfuture.gov.sg/v2/jobs",
+            params={"search": keyword, "limit": 50, "page": 0},
+            headers={"accept": "application/json", "User-Agent": "Mozilla/5.0"},
+            timeout=20,
+        )
+    except requests.RequestException:
+        return 0, []
+    if response.status_code != 200:
+        return response.status_code, []
+    jobs = []
+    for item in response.json().get("results", []):
+        salary = item.get("salary") or {}
+        low, high = salary.get("minimum"), salary.get("maximum")
+        salary_text = ""
+        if low and high:
+            salary_text = f"Salary: S${int(low):,} to S${int(high):,} per month. "
+        link = (item.get("metadata") or {}).get("jobDetailsUrl") or f"https://www.mycareersfuture.gov.sg/job/{item.get('uuid', '')}"
+        jobs.append(make_job(
+            item.get("title"),
+            (item.get("postedCompany") or {}).get("name"),
+            "Singapore",
+            salary_text + clean_text(item.get("description")),
+            link,
+        ))
+    return 200, jobs
+
+
+@st.cache_data(ttl=3600)
+def fetch_reed(api_key, keyword, location):
+    try:
+        response = requests.get(
+            "https://www.reed.co.uk/api/1.0/search",
+            params={"keywords": keyword, "locationName": location, "resultsToTake": 50},
+            auth=(api_key, ""),
+            timeout=20,
+        )
+    except requests.RequestException:
+        return 0, []
+    if response.status_code != 200:
+        return response.status_code, []
+    jobs = []
+    for item in response.json().get("results", []):
+        low, high = item.get("minimumSalary"), item.get("maximumSalary")
+        salary_text = ""
+        if low and high:
+            salary_text = f"Salary: £{int(low):,} to £{int(high):,} per year. "
+        jobs.append(make_job(
+            item.get("jobTitle"),
+            item.get("employerName"),
+            item.get("locationName"),
+            salary_text + clean_text(item.get("jobDescription")),
+            item.get("jobUrl"),
+        ))
+    return 200, jobs
+
+
+def fetch_jobs_for_country(country, keyword, city):
+    if country == "Sweden":
+        status, jobs = fetch_sweden(keyword, city)
+        if status == 200:
+            return status, jobs, "Platsbanken (official)"
+    elif country == "Singapore":
+        status, jobs = fetch_singapore(keyword)
+        if status == 200:
+            return status, jobs, "MyCareersFuture (official)"
+    elif country in UK_COUNTRIES and "REED_API_KEY" in st.secrets:
+        place = city if city else ("Scotland" if country == "Scotland" else "")
+        status, jobs = fetch_reed(st.secrets["REED_API_KEY"], keyword, place)
+        if status == 200:
+            return status, jobs, "Reed API"
+    location = city if city else country
+    status, jobs = fetch_jobs(st.secrets["JOOBLE_API_KEY"], keyword, location)
+    return status, jobs, "Jooble"
 
 def ask_gemini(prompt):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
@@ -276,8 +392,7 @@ with tab_jobs:
 
     # ----- Search -----
     if search_clicked:
-        location = city if city else country
-        status, jobs = fetch_jobs(st.secrets["JOOBLE_API_KEY"], keyword, location)
+                status, jobs, source = fetch_jobs_for_country(country, keyword, city)
 
         if status != 200:
             st.error(f"Error {status}. Check your key in Secrets.")
@@ -296,6 +411,7 @@ with tab_jobs:
             st.session_state["searched_country"] = country
             st.session_state["searched_keyword"] = keyword
             st.session_state["searched_city"] = city
+            st.session_state["source"] = source
             st.session_state["scores"] = {}
             st.session_state["letters"] = {}
 
@@ -310,6 +426,7 @@ with tab_jobs:
         sponsors = sponsors or {}
 
         st.subheader(f"{len(jobs)} jobs found")
+        st.caption(f"Source: {st.session_state.get('source', 'Jooble')}")
         board_links = local_board_links(
         st.session_state["searched_country"],
         st.session_state.get("searched_keyword", ""),
