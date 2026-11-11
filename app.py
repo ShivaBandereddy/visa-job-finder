@@ -393,7 +393,7 @@ with tab_jobs:
 
     # ----- Search -----
     if search_clicked:
-            status, jobs, source = fetch_jobs_for_country(country, keyword, city)
+        status, jobs, source = fetch_jobs_for_country(country, keyword, city)
 
         if status != 200:
             st.error(f"Error {status}. Check your key in Secrets.")
